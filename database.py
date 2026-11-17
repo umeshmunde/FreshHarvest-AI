@@ -11,7 +11,7 @@ from config import DB_PATH
 
 def get_connection():
     """Get a database connection with dict-like row access."""
-    conn = sqlite3.connect(str(DB_PATH))
+    conn = sqlite3.connect(str(DB_PATH), timeout=30.0, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     return conn
 
