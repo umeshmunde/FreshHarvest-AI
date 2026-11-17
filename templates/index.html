@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+
+{% block title %}FreshHarvest AI – Multi-Model Fruit Freshness & Quality Assessment{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <!-- Hero Section -->
+    <div class="hero-gradient mb-5 shadow">
+        <div class="row align-items-center gy-4">
+            <div class="col-lg-8">
+                <div class="d-inline-flex align-items-center gap-2 px-3 py-1 bg-white bg-opacity-10 rounded-pill mb-3 border border-white border-opacity-15">
+                    <i class="fa-solid fa-microchip text-success"></i>
+                    <span class="small fw-semibold">Next-Gen Agricultural Computer Vision</span>
+                </div>
+                <h1 class="display-5 fw-extrabold text-white mb-3">
+                    Multi-Model Fruit Freshness & Quality Assessment
+                </h1>
+                <p class="lead text-white-50 mb-4" style="max-width: 680px;">
+                    FreshHarvest AI unifies <strong>EfficientNet-B0</strong>, <strong>ResNet-50</strong>, and <strong>MobileNet-V2</strong>
+                    with explainable <strong>Grad-CAM</strong> visual heatmaps to detect fruit species, classify freshness,
+                    and compute multi-model consensus in real time.
+                </p>
+                <div class="d-flex flex-wrap gap-3">
+                    <a href="{{ url_for('upload_page') }}" class="btn btn-success btn-lg px-4 fw-bold shadow">
+                        <i class="fa-solid fa-camera me-2"></i> Inspect Fruit Image
+                    </a>
+                    <a href="{{ url_for('compare_page') }}" class="btn btn-outline-light btn-lg px-4 fw-bold">
+                        <i class="fa-solid fa-code-compare me-2"></i> Compare All 3 Models
+                    </a>
+                    <a href="{{ url_for('batch_page') }}" class="btn btn-dark btn-lg px-3 fw-bold border border-secondary">
+                        <i class="fa-solid fa-layer-group me-2"></i> Batch Scan
+                    </a>
+                </div>
+            </div>
+            <div class="col-lg-4 text-center d-none d-lg-block">
+                <div class="p-3 bg-white bg-opacity-10 rounded-4 border border-white border-opacity-20 backdrop-blur">
+                    <div class="d-flex justify-content-between text-start mb-3">
+                        <span class="small text-white-50">Active Models</span>
+                        <span class="badge bg-success">Online</span>
+                    </div>
+                    <div class="text-start mb-2">
+                        <small class="text-white d-block">1. EfficientNet-B0 (Compound Scaling)</small>
+                        <div class="progress my-1" style="height: 6px;">
+                            <div class="progress-bar bg-success" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="text-start mb-2">
+                        <small class="text-white d-block">2. ResNet-50 (Residual Skip Connections)</small>
+                        <div class="progress my-1" style="height: 6px;">
+                            <div class="progress-bar bg-info" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <div class="text-start">
+                        <small class="text-white d-block">3. MobileNet-V2 (Inverted Residuals)</small>
+                        <div class="progress my-1" style="height: 6px;">
+                            <div class="progress-bar bg-warning" style="width: 100%"></div>
+                        </div>
+                    </div>
+                    <hr class="border-white border-opacity-20 my-3">
+                    <div class="small text-white-50">
+                        <i class="fa-solid fa-eye text-success me-1"></i> Explainable AI: Grad-CAM Activated
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Live Statistics KPI Row -->
+    <div class="row g-3 mb-5">
+        <div class="col-6 col-md-3">
+            <div class="stat-tile">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary">
+                    <i class="fa-solid fa-apple-whole"></i>
+                </div>
+                <div>
+                    <div class="stat-val" id="stat-total">{{ stats.total_predictions }}</div>
+                    <div class="stat-label">Total Scans</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile">
+                <div class="stat-icon bg-success bg-opacity-10 text-success">
+                    <i class="fa-solid fa-circle-check"></i>
+                </div>
+                <div>
+                    <div class="stat-val text-success">{{ stats.fresh_percentage }}%</div>
+                    <div class="stat-label">Fresh Ratio</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile">
+                <div class="stat-icon bg-danger bg-opacity-10 text-danger">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                </div>
+                <div>
+                    <div class="stat-val text-danger">{{ stats.spoiled_percentage }}%</div>
+                    <div class="stat-label">Spoiled Ratio</div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="stat-tile">
+                <div class="stat-icon bg-warning bg-opacity-10 text-warning">
+                    <i class="fa-solid fa-gauge-high"></i>
+                </div>
+                <div>
+                    <div class="stat-val">{{ stats.avg_latency }}<small class="fs-6 text-muted">ms</small></div>
+                    <div class="stat-label">Avg Latency</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 1-Click Interactive Test Drive Section -->
+    <div class="card card-custom mb-5">
+        <div class="card-header-clean d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <div>
+                <h4 class="mb-0 fw-bold"><i class="fa-solid fa-flask-vial text-success me-2"></i>1-Click Test Drive</h4>
+                <small class="text-muted">Instant validation on preloaded fruit samples without searching for images.</small>
+            </div>
+            <span class="badge bg-secondary-subtle text-secondary border">7 Fruit Varieties Supported</span>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                {% for sample in samples %}
+                <div class="col-md-6 col-lg-4 col-xl-3">
+                    <div class="p-3 border rounded-3 bg-light text-center h-100 d-flex flex-column justify-content-between">
+                        <div class="mb-2">
+                            <span class="fw-bold fs-6 text-dark">{{ sample.fruit }}</span>
+                        </div>
+                        <div class="d-flex gap-2 justify-content-center my-2">
+                            <img src="{{ url_for('static', filename=sample.fresh_image) }}" class="rounded shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Fresh {{ sample.fruit }}">
+                            <img src="{{ url_for('static', filename=sample.spoiled_image) }}" class="rounded shadow-sm" style="width: 60px; height: 60px; object-fit: cover;" alt="Spoiled {{ sample.fruit }}">
+                        </div>
+                        <div class="d-flex gap-2 mt-2">
+                            <a href="{{ url_for('quick_test', img_path=sample.fresh_image) }}" class="btn btn-outline-success btn-sm w-50 fw-semibold">
+                                <i class="fa-solid fa-check"></i> Fresh
+                            </a>
+                            <a href="{{ url_for('quick_test', img_path=sample.spoiled_image) }}" class="btn btn-outline-danger btn-sm w-50 fw-semibold">
+                                <i class="fa-solid fa-xmark"></i> Spoiled
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- System Features & Architecture Grid -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card card-custom h-100 p-4">
+                <div class="stat-icon bg-success bg-opacity-10 text-success mb-3">
+                    <i class="fa-solid fa-network-wired"></i>
+                </div>
+                <h5 class="fw-bold">Multi-Model Architecture</h5>
+                <p class="text-muted small">
+                    Integrates <strong>EfficientNet-B0</strong>, <strong>ResNet-50</strong>, and <strong>MobileNet-V2</strong> simultaneously.
+                    Evaluates agreement consensus and compares confidence scores across models.
+                </p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('compare_page') }}" class="small fw-bold text-success text-decoration-none">
+                        View Model Comparison <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-custom h-100 p-4">
+                <div class="stat-icon bg-primary bg-opacity-10 text-primary mb-3">
+                    <i class="fa-solid fa-brain"></i>
+                </div>
+                <h5 class="fw-bold">Explainable AI (Grad-CAM)</h5>
+                <p class="text-muted small">
+                    Gradient-weighted Class Activation Mapping computes neural activation heatmaps at the final conv layer,
+                    highlighting exact rot, discoloration, and skin blemishes that influenced the prediction.
+                </p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('upload_page') }}" class="small fw-bold text-primary text-decoration-none">
+                        Try Heatmap Scan <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-custom h-100 p-4">
+                <div class="stat-icon bg-info bg-opacity-10 text-info mb-3">
+                    <i class="fa-solid fa-boxes-stacked"></i>
+                </div>
+                <h5 class="fw-bold">Batch Quality Processing</h5>
+                <p class="text-muted small">
+                    Designed for industrial quality assurance. Upload folders or ZIP files with dozens of fruit images for
+                    instant batch inspection, freshness ratio reports, and CSV audit export.
+                </p>
+                <div class="mt-auto">
+                    <a href="{{ url_for('batch_page') }}" class="small fw-bold text-info text-decoration-none">
+                        Open Batch Dashboard <i class="fa-solid fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+

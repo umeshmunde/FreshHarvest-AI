@@ -1,0 +1,29 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Large Raw Datasets (Do NOT commit 3.5GB raw photos to GitHub)
+data/dataset/
+data/dataset.zip
+*.zip
+
+# Virtual Environments
+.venv/
+env/
+venv/
+ENV/
+
+# IDE configurations
+.idea/
+.vscode/
+
+# Logs and runtime caches
+logs/
+*.log
+.matplotlib/
+scratch/
+
+# Windows desktop artifacts
+desktop.ini
+Thumbs.db

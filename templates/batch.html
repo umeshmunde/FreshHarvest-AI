@@ -1,0 +1,187 @@
+{% extends "base.html" %}
+
+{% block title %}Batch Quality Inspection – FreshHarvest AI{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="text-center mb-4">
+        <h2 class="fw-bold"><i class="fa-solid fa-layer-group text-success me-2"></i>Batch Fruit Quality Assessment</h2>
+        <p class="text-muted">High-throughput automated quality screening for supply chains, crates, and warehouse shipments.</p>
+    </div>
+
+    <!-- Batch Upload Card -->
+    <div class="card card-custom p-4 mb-4" style="max-width: 900px; margin: 0 auto;">
+        <form id="batch-form" action="{{ url_for('handle_batch_upload') }}" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <label class="form-label fw-bold small text-muted">SELECT MULTIPLE IMAGES OR A ZIP ARCHIVE</label>
+                <input type="file" name="files" id="batch-input" class="form-control form-control-lg" multiple required accept="image/*, .zip">
+                <div class="form-text text-muted">
+                    Select multiple fruit images (Ctrl+Click) or upload a <code>.zip</code> file containing images.
+                </div>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <div class="col-md-6">
+                    <label class="form-label fw-bold small text-muted">CLASSIFIER MODEL</label>
+                    <select name="model_name" class="form-select form-select-lg">
+                        <option value="efficientnet_b0" selected>EfficientNet-B0 (Recommended)</option>
+                        <option value="mobilenet_v2">MobileNet-V2 (Fastest Throughput)</option>
+                        <option value="resnet50">ResNet-50 (Deep Feature Extractor)</option>
+                    </select>
+                </div>
+                <div class="col-md-6 d-flex align-items-end">
+                    <button type="submit" id="btn-batch-submit" class="btn btn-success btn-lg w-100 fw-bold shadow">
+                        <i class="fa-solid fa-play me-2"></i> Start Batch Processing
+                    </button>
+                </div>
+            </div>
+        </form>
+
+        <div id="batch-spinner" class="text-center py-4 d-none">
+            <div class="spinner-border text-success" role="status">
+                <span class="visually-hidden">Processing batch...</span>
+            </div>
+            <h6 class="fw-bold mt-2 mb-0">Processing batch images sequentially...</h6>
+        </div>
+    </div>
+
+    <!-- Batch Results View (if batch completed) -->
+    {% if batch %}
+    <div class="card card-custom p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+            <div>
+                <h4 class="fw-bold mb-0">Batch Screening Results</h4>
+                <small class="text-muted">Batch ID: #{{ batch.batch_id }} • Model: {{ batch.model_name }}</small>
+            </div>
+            <button class="btn btn-outline-success fw-bold" onclick="exportBatchTableToCSV('batch_{{ batch.batch_id }}.csv')">
+                <i class="fa-solid fa-file-csv me-1"></i> Export to CSV
+            </button>
+        </div>
+
+        <!-- Summary KPI Cards -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-3">
+                <div class="p-3 bg-light rounded-3 border text-center">
+                    <span class="text-muted small text-uppercase fw-bold">Total Scanned</span>
+                    <div class="h3 fw-bold text-dark my-1">{{ batch.total }}</div>
+                    <small class="text-muted">Image items</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 bg-success bg-opacity-10 rounded-3 border border-success border-opacity-25 text-center">
+                    <span class="text-success small text-uppercase fw-bold">Fresh Quality</span>
+                    <div class="h3 fw-bold text-success my-1">{{ batch.fresh_count }} ({{ batch.fresh_percentage }}%)</div>
+                    <small class="text-success">Passed Inspection</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 bg-danger bg-opacity-10 rounded-3 border border-danger border-opacity-25 text-center">
+                    <span class="text-danger small text-uppercase fw-bold">Spoiled / Degraded</span>
+                    <div class="h3 fw-bold text-danger my-1">{{ batch.spoiled_count }} ({{ batch.spoiled_percentage }}%)</div>
+                    <small class="text-danger">Rejected Items</small>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="p-3 bg-light rounded-3 border text-center">
+                    <span class="text-muted small text-uppercase fw-bold">Avg Confidence</span>
+                    <div class="h3 fw-bold text-primary my-1">{{ batch.average_confidence }}%</div>
+                    <small class="text-muted">Prediction Certainty</small>
+                </div>
+            </div>
+        </div>
+
+        <!-- Table -->
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="batch-results-table">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Image</th>
+                        <th>Filename</th>
+                        <th>Fruit Type</th>
+                        <th>Freshness Verdict</th>
+                        <th>Confidence</th>
+                        <th>Latency</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in batch.items %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if item.image_path %}
+                            <img src="{{ url_for('static', filename=item.image_path) }}" class="rounded border" style="width: 45px; height: 45px; object-fit: cover;" alt="Fruit">
+                            {% else %}
+                            <i class="fa-solid fa-image text-muted"></i>
+                            {% endif %}
+                        </td>
+                        <td><small class="fw-bold">{{ item.filename }}</small></td>
+                        <td><span class="badge bg-light text-dark border">{{ item.fruit_type }}</span></td>
+                        <td>
+                            {% if item.freshness == 'Fresh' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                <i class="fa-solid fa-circle-check me-1"></i> Fresh
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                <i class="fa-solid fa-circle-xmark me-1"></i> Spoiled
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 6px; width: 60px;">
+                                    <div class="progress-bar {% if item.freshness == 'Fresh' %}bg-success{% else %}bg-danger{% endif %}" style="width: {{ item.confidence }}%"></div>
+                                </div>
+                                <small class="fw-bold">{{ item.confidence }}%</small>
+                            </div>
+                        </td>
+                        <td><small class="text-muted">{{ item.latency_ms }} ms</small></td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    const batchForm = document.getElementById('batch-form');
+    const batchSpinner = document.getElementById('batch-spinner');
+
+    if (batchForm) {
+        batchForm.addEventListener('submit', () => {
+            batchForm.classList.add('d-none');
+            batchSpinner.classList.remove('d-none');
+        });
+    }
+
+    function exportBatchTableToCSV(filename) {
+        let csv = [];
+        const rows = document.querySelectorAll("#batch-results-table tr");
+        for (let i = 0; i < rows.length; i++) {
+            let row = [], cols = rows[i].querySelectorAll("td, th");
+            for (let j = 0; j < cols.length; j++) {
+                if (j !== 1) { // Skip image column
+                    row.push('"' + cols[j].innerText.trim().replace(/"/g, '""') + '"');
+                }
+            }
+            csv.push(row.join(","));
+        }
+        const csvFile = new Blob([csv.join("\n")], { type: "text/csv" });
+        const downloadLink = document.createElement("a");
+        downloadLink.download = filename;
+        downloadLink.href = window.URL.createObjectURL(csvFile);
+        downloadLink.style.display = "none";
+        document.body.appendChild(downloadLink);
+        downloadLink.click();
+        document.body.removeChild(downloadLink);
+    }
+</script>
+{% endblock %}
+

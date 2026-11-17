@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Model Comparison – FreshHarvest AI{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="text-center mb-4">
+        <h2 class="fw-bold"><i class="fa-solid fa-code-compare text-success me-2"></i>Multi-Model Comparative Benchmark</h2>
+        <p class="text-muted">Direct side-by-side evaluation of EfficientNet-B0, ResNet-50, and MobileNet-V2 on speed, confidence, and explainability.</p>
+    </div>
+
+    <!-- Quick Run Form -->
+    <div class="card card-custom p-4 mb-4">
+        <form action="{{ url_for('run_compare') }}" method="POST" enctype="multipart/form-data" class="row g-3 align-items-center">
+            <div class="col-md-8">
+                <label class="form-label fw-bold small text-muted">UPLOAD IMAGE FOR MULTI-MODEL BENCHMARK</label>
+                <input type="file" name="image" class="form-control form-control-lg" required accept="image/*">
+            </div>
+            <div class="col-md-4 mt-md-4 pt-md-2">
+                <button type="submit" class="btn btn-success btn-lg w-100 fw-bold shadow">
+                    <i class="fa-solid fa-play me-1"></i> Benchmark All 3 Models
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Benchmark Cards (If comparison results exist or default benchmark) -->
+    {% if comparison %}
+    <div class="alert alert-success d-flex align-items-center justify-content-between p-3 rounded-3 mb-4 shadow-sm">
+        <div>
+            <i class="fa-solid fa-trophy fs-4 me-2 text-warning"></i>
+            <strong>Consensus Verdict:</strong>
+            <span class="badge {% if comparison.consensus.consensus_freshness == 'Fresh' %}bg-success{% else %}bg-danger{% endif %} fs-6 ms-2">
+                {{ comparison.consensus.consensus_freshness }} {{ comparison.consensus.consensus_fruit_type }}
+            </span>
+            <span class="ms-2">({{ comparison.consensus.agreement_ratio }} Consensus)</span>
+        </div>
+        <div class="small">
+            Best Confidence: <strong>{{ comparison.consensus.best_model }}</strong> ({{ comparison.consensus.average_confidence }}% avg)
+        </div>
+    </div>
+
+    <div class="row g-4 mb-5">
+        {% for mkey, mdata in comparison.models.items() %}
+        <div class="col-lg-4">
+            <div class="card card-custom h-100 overflow-hidden shadow-sm">
+                <div class="p-3 bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="fw-bold mb-0 text-white">{{ mdata.model_display_name }}</h5>
+                        <small class="text-white-50">{{ mkey }}</small>
+                    </div>
+                    {% if mdata.freshness == 'Fresh' %}
+                    <span class="badge bg-success">Fresh</span>
+                    {% else %}
+                    <span class="badge bg-danger">Spoiled</span>
+                    {% endif %}
+                </div>
+
+                <div class="p-3">
+                    <!-- Grad-CAM Visual -->
+                    <div class="viewer-box mb-3" style="height: 220px;">
+                        {% if mdata.heatmap_path %}
+                        <img src="{{ url_for('static', filename=mdata.heatmap_path) }}" alt="CAM {{ mdata.model_display_name }}" style="height: 220px;">
+                        <span class="viewer-label bg-dark bg-opacity-75">Grad-CAM Overlay</span>
+                        {% else %}
+                        <div class="d-flex align-items-center justify-content-center text-white h-100 bg-secondary">
+                            <span>Heatmap Unavailable</span>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Detected Fruit:</span>
+                        <strong class="text-dark">{{ mdata.fruit_type }}</strong>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Confidence:</span>
+                        <strong class="text-success">{{ mdata.confidence }}%</strong>
+                    </div>
+
+                    <div class="progress mb-3" style="height: 8px;">
+                        <div class="progress-bar {% if mdata.freshness == 'Fresh' %}bg-success{% else %}bg-danger{% endif %}"
+                             style="width: {{ mdata.confidence }}%"></div>
+                    </div>
+
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <span class="text-muted small">Inference Latency:</span>
+                        <span class="badge bg-light text-dark border">{{ mdata.latency_ms }} ms</span>
+                    </div>
+
+                    <hr class="my-2">
+                    <div class="small text-muted mt-2">
+                        {% if mkey == 'efficientnet_b0' %}
+                        Compound scaling with optimal balance of depth, width and resolution.
+                        {% elif mkey == 'resnet50' %}
+                        50 residual layers with bottleneck blocks; robust high-order representations.
+                        {% else %}
+                        Lightweight inverted residual blocks with linear bottleneck for mobile edge.
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Overall Model Metric Leaderboard Table -->
+    <div class="card card-custom p-4 mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <h4 class="fw-bold mb-0"><i class="fa-solid fa-chart-simple text-success me-2"></i>Test Dataset Evaluation Leaderboard</h4>
+                <small class="text-muted">Rigorous test-set benchmark evaluated across held-out images.</small>
+            </div>
+            <a href="{{ url_for('admin_page') }}" class="btn btn-sm btn-outline-success">
+                View Full Confusion Matrices <i class="fa-solid fa-arrow-right ms-1"></i>
+            </a>
+        </div>
+
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Architecture</th>
+                        <th>Test Accuracy</th>
+                        <th>Precision</th>
+                        <th>Recall</th>
+                        <th>F1-Score</th>
+                        <th>Test Loss</th>
+                        <th>Evaluated Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for m in metrics %}
+                    <tr>
+                        <td>
+                            <strong class="d-block text-dark">{{ m.model_name }}</strong>
+                            <small class="text-muted">{{ m.model_key }}</small>
+                        </td>
+                        <td>
+                            <span class="fw-bold fs-6 text-success">{{ (m.accuracy * 100)|round(2) }}%</span>
+                        </td>
+                        <td>{{ (m.precision * 100)|round(2) }}%</td>
+                        <td>{{ (m.recall * 100)|round(2) }}%</td>
+                        <td><span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">{{ (m.f1_score * 100)|round(2) }}%</span></td>
+                        <td><small class="text-muted">{{ m.test_loss|round(4) if m.test_loss else '0.00' }}</small></td>
+                        <td><small class="text-muted">{{ m.evaluation_date }}</small></td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="7" class="text-center py-4 text-muted">
+                            No benchmark records found. Run training or evaluation script to populate benchmark leaderboard.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+

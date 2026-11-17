@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}Inspection History – FreshHarvest AI{% endblock %}
+
+{% block content %}
+<div class="container">
+
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
+        <div>
+            <h2 class="fw-bold mb-0"><i class="fa-solid fa-clock-rotate-left text-success me-2"></i>Inspection History & Audit Log</h2>
+            <small class="text-muted">Persistent SQLite storage of all past fruit freshness scans and Grad-CAM analyses.</small>
+        </div>
+        <div class="d-flex gap-2">
+            <a href="{{ url_for('export_history_csv') }}" class="btn btn-outline-success fw-bold">
+                <i class="fa-solid fa-download me-1"></i> Export CSV
+            </a>
+            <button class="btn btn-outline-danger fw-bold" data-bs-toggle="modal" data-bs-target="#clearModal">
+                <i class="fa-solid fa-trash me-1"></i> Clear History
+            </button>
+        </div>
+    </div>
+
+    <!-- Filter Form Card -->
+    <div class="card card-custom p-3 mb-4">
+        <form method="GET" action="{{ url_for('history_page') }}" class="row g-2 align-items-center">
+            <div class="col-md-4">
+                <input type="text" name="search" class="form-control" placeholder="Search filename, fruit, or notes..." value="{{ current_search or '' }}">
+            </div>
+            <div class="col-md-3">
+                <select name="freshness" class="form-select">
+                    <option value="All" {% if current_freshness == 'All' %}selected{% endif %}>All Freshness States</option>
+                    <option value="Fresh" {% if current_freshness == 'Fresh' %}selected{% endif %}>Fresh Only</option>
+                    <option value="Spoiled" {% if current_freshness == 'Spoiled' %}selected{% endif %}>Spoiled Only</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="fruit" class="form-select">
+                    <option value="All" {% if current_fruit == 'All' %}selected{% endif %}>All Fruit Varieties</option>
+                    {% for f in fruit_types %}
+                    <option value="{{ f }}" {% if current_fruit == f %}selected{% endif %}>{{ f }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2 d-flex gap-2">
+                <button type="submit" class="btn btn-success w-100 fw-bold">
+                    <i class="fa-solid fa-filter me-1"></i> Filter
+                </button>
+                <a href="{{ url_for('history_page') }}" class="btn btn-outline-secondary" title="Reset Filters">
+                    <i class="fa-solid fa-rotate-left"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <!-- History Table Card -->
+    <div class="card card-custom p-4 mb-4">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Scan Date</th>
+                        <th>Thumbnail</th>
+                        <th>Fruit Type</th>
+                        <th>Freshness</th>
+                        <th>Confidence</th>
+                        <th>Model Used</th>
+                        <th>Latency</th>
+                        <th class="text-end">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in predictions %}
+                    <tr>
+                        <td><small class="text-muted fw-bold">#{{ row.id }}</small></td>
+                        <td><small class="text-muted">{{ row.timestamp }}</small></td>
+                        <td>
+                            {% if row.original_image_path %}
+                            <img src="{{ url_for('static', filename=row.original_image_path) }}" class="rounded border" style="width: 44px; height: 44px; object-fit: cover;" alt="Fruit">
+                            {% endif %}
+                        </td>
+                        <td><strong class="text-dark">{{ row.fruit_type }}</strong></td>
+                        <td>
+                            {% if row.freshness == 'Fresh' %}
+                            <span class="badge bg-success-subtle text-success border border-success-subtle fw-bold">
+                                <i class="fa-solid fa-circle-check me-1"></i> Fresh
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger-subtle text-danger border border-danger-subtle fw-bold">
+                                <i class="fa-solid fa-circle-xmark me-1"></i> Spoiled
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="progress flex-grow-1" style="height: 6px; width: 50px;">
+                                    <div class="progress-bar {% if row.freshness == 'Fresh' %}bg-success{% else %}bg-danger{% endif %}"
+                                         style="width: {{ (row.confidence * 100) if row.confidence <= 1.0 else row.confidence }}%"></div>
+                                </div>
+                                <small class="fw-bold">{{ (row.confidence * 100)|round(1) if row.confidence <= 1.0 else row.confidence|round(1) }}%</small>
+                            </div>
+                        </td>
+                        <td><small class="text-muted">{{ row.model_name }}</small></td>
+                        <td><small class="text-muted">{{ row.latency_ms }} ms</small></td>
+                        <td class="text-end">
+                            <div class="btn-group btn-group-sm">
+                                <a href="{{ url_for('result_page', record_id=row.id) }}" class="btn btn-outline-primary" title="View Detailed Report">
+                                    <i class="fa-solid fa-eye"></i>
+                                </a>
+                                <form action="{{ url_for('delete_record', record_id=row.id) }}" method="POST" class="d-inline" onsubmit="return confirm('Delete this record?');">
+                                    <button type="submit" class="btn btn-outline-danger" title="Delete">
+                                        <i class="fa-solid fa-trash"></i>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="9" class="text-center py-5 text-muted">
+                            <i class="fa-regular fa-folder-open fs-2 mb-2 d-block text-secondary"></i>
+                            No prediction history found matching your query.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+</div>
+
+<!-- Clear History Confirmation Modal -->
+<div class="modal fade" id="clearModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold text-danger"><i class="fa-solid fa-triangle-exclamation me-2"></i>Clear Prediction History</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete all historical prediction records from the SQLite database? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('clear_history_action') }}" method="POST">
+                    <button type="submit" class="btn btn-danger fw-bold">Yes, Clear All History</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
